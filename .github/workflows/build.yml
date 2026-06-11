@@ -47,6 +47,12 @@ jobs:
           echo "networktest=https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Speedtest/Speedtest.list" >> $GITHUB_ENV
           echo "cn1=https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/accelerated-domains.china.conf" >> $GITHUB_ENV
           echo "cn2=https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/China/China.list" >> $GITHUB_ENV
+          # ===== 自定义源 =====
+          echo "media_extra_domainset1=https://ruleset.skk.moe/Clash/domainset/download.txt" >> $GITHUB_ENV
+          echo "media_extra_nonip=https://ruleset.skk.moe/Clash/non_ip/download.txt" >> $GITHUB_ENV
+          echo "media_extra_domainset2=https://mihomo.deng2z.xyz/config/download.txt" >> $GITHUB_ENV
+          echo "cn_extra=https://mihomo.deng2z.xyz/config/direct.txt" >> $GITHUB_ENV
+
         shell: bash
 
       - name: Checkout codebase
@@ -138,6 +144,14 @@ jobs:
           # keyword for `media`
           curl -sSL ${media} | awk '/DOMAIN-KEYWORD,/' | sed 's/DOMAIN-KEYWORD,//' | sort --ignore-case > ./tmp/temp-media-sort-keyword.txt
 
+          # ========== 你的自定义 media 源 ==========
+          # domainset 格式（+\. 前缀或裸域名）→ 都是 DOMAIN-SUFFIX
+          curl -sSL ${media_extra_domainset1} | grep -v '^#' | grep -v '^$' | grep -v '^DOMAIN' | sed 's/^+\.//' | sort --ignore-case >> ./tmp/temp-media-sort-suffix.txt
+          curl -sSL ${media_extra_domainset2} | grep -v '^#' | grep -v '^$' | grep -v '^DOMAIN' | sed 's/^+\.//' | sort --ignore-case >> ./tmp/temp-media-sort-suffix.txt
+          # non_ip 格式
+          curl -sSL ${media_extra_nonip} | grep '^DOMAIN,' | sed 's/^DOMAIN,//' | sort --ignore-case >> ./tmp/temp-media-sort-domain.txt
+          curl -sSL ${media_extra_nonip} | grep '^DOMAIN-WILDCARD,' | sed 's/^DOMAIN-WILDCARD,//; s/\./\\./g; s/\*/[^.]+/g; s/\?/./g; s/^/^/; s/$/$/' | sed 's/^/DOMAIN-REGEX,/' >> ./tmp/temp-media-sort-keyword.txt
+
           # suffix for `ai`
           cat ./publish/category-ai-\!cn.txt | perl -ne '/^(domain):([^:]+)(\n$|:\@.+)/ && print "$2\n"' > ./tmp/temp-ai-unsort-suffix.txt
           curl -sSL ${ai} | awk '/DOMAIN-SUFFIX,/' | sed 's/DOMAIN-SUFFIX,//' >> ./tmp/temp-ai-unsort-suffix.txt
@@ -170,6 +184,9 @@ jobs:
           cat ./publish/cn.txt | perl -ne '/^(domain):([^:]+)(\n$|:\@.+)/ && print "$2\n"' > ./tmp/temp-cn-unsort-suffix.txt
           curl -sSL ${cn1} | awk '!/# Disabled/' | perl -ne '/server=\/([^\/]+)/ && print "$1\n"' >> ./tmp/temp-cn-unsort-suffix.txt
           sort --ignore-case -u ./tmp/temp-cn-unsort-suffix.txt > ./tmp/temp-cn-sort-suffix.txt
+
+          # ========== 你的自定义 cn 源 ==========
+          curl -sSL ${cn_extra} | grep -v '^#' | grep -v '^$' | grep -v '^DOMAIN' | sed 's/^+\.//' | sort --ignore-case >> ./tmp/temp-cn-sort-suffix.txt
 
           # domain for `cn`
           cat ./publish/cn.txt | perl -ne '/^(full):([^:]+)(\n$|:\@.+)/ && print "$2\n"' | sort --ignore-case > ./tmp/temp-cn-sort-domain.txt
