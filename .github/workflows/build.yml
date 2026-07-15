@@ -28,7 +28,8 @@ jobs:
           echo "applications1=https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Download/Download.list" >> $GITHUB_ENV
           echo "applications2=https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/applications.txt" >> $GITHUB_ENV
           echo "apple_cn=https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/apple.china.conf" >> $GITHUB_ENV
-          echo "google_cn=https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/google.china.conf" >> $GITHUB_ENV
+          echo "google_cn1=https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/google.china.conf" >> $GITHUB_ENV
+          echo "google_cn2=https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/GoogleFCM/GoogleFCM.list" >> $GITHUB_ENV
           echo "games_cn1=https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Game/GameDownloadCN/GameDownloadCN.list" >> $GITHUB_ENV
           echo "games_cn2=https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/SteamCN/SteamCN.list" >> $GITHUB_ENV
           echo "games1=https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Game/Game.list" >> $GITHUB_ENV
@@ -227,6 +228,7 @@ jobs:
 
           cat <<EOF > ./tmp/temp-private-other.txt
           DOMAIN,board.zash.run.place
+          DOMAIN,zephyruso.github.io
           DOMAIN,dash.sing-box.app
           DOMAIN,metacubex.github.io
           DOMAIN,metacubexd.pages.dev
@@ -272,12 +274,14 @@ jobs:
       - name: Generate `google-cn`
         run: |
           cat ./publish/google.txt | perl -ne '/^(domain):([^:]+):\@cn$/ && print "$2\n"' > ./tmp/temp-google-cn-suffix.txt
-          curl -sSL ${google_cn} | awk '!/# Disabled/' | perl -ne '/server=\/([^\/]+)/ && print "$1\n"' >> ./tmp/temp-google-cn-suffix.txt
+          curl -sSL ${google_cn1} | awk '!/# Disabled/' | perl -ne '/server=\/([^\/]+)/ && print "$1\n"' >> ./tmp/temp-google-cn-suffix.txt
+          curl -sSL ${google_cn2} | awk '/DOMAIN-SUFFIX,/' | sed 's/DOMAIN-SUFFIX,//' >> ./tmp/temp-google-cn-suffix.txt
           sort --ignore-case -u ./tmp/temp-google-cn-suffix.txt > ./tmp/google-cn-suffix.txt
 
           cat ./publish/google.txt | perl -ne '/^(full):([^:]+):\@cn$/ && print "DOMAIN,$2\n"' > ./tmp/temp-google-cn-other.txt
           cat ./publish/google.txt | perl -ne '/^(keyword):([^:]+):\@cn$/ && print "DOMAIN-KEYWORD,$2\n"' >> ./tmp/temp-google-cn-other.txt
-          sort --ignore-case ./tmp/temp-google-cn-other.txt > ./tmp/google-cn-other.txt
+          curl -sSL ${google_cn2} | awk '/(DOMAIN,|DOMAIN-KEYWORD,)/' >> ./tmp/temp-google-cn-other.txt
+          sort --ignore-case -u ./tmp/temp-google-cn-other.txt > ./tmp/google-cn-other.txt
 
       - name: Generate `games-cn`
         run: |
