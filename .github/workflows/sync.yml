@@ -16,19 +16,24 @@ jobs:
     steps:
       - name: Checkout target repo
         uses: actions/checkout@v7
+        with:
+          # 用带 workflow 权限的 PAT，才能回写 .github/workflows/*
+          token: ${{ secrets.WORKFLOW_PAT }}
+          fetch-depth: 0
 
       - name: Sync upstream changes
         id: sync
         uses: aormsby/Fork-Sync-With-Upstream-action@v3.4.3
         with:
-          upstream_sync_repo: Loyalsoldier/domain-list-custom
-          upstream_sync_branch: master
+          upstream_sync_repo: DustinWin/domain-list-custom
+          upstream_sync_branch: main
           target_sync_branch: main
-          target_repo_token: ${{ secrets.GITHUB_TOKEN }}
+          target_repo_token: ${{ secrets.WORKFLOW_PAT }}
           test_mode: false
 
       - name: Sync check
         if: failure()
         run: |
-          echo "[Error] 由于上游仓库的 workflow 文件变更，导致 GitHub 自动暂停了本次自动更新，你需要手动 Sync Fork 一次。"
+          echo "[Error] 自动同步失败。常见原因：1) WORKFLOW_PAT 失效/权限不足 2) 与自定义改动冲突。"
+          echo "需要时手动对齐上游并重贴自定义。"
           exit 1
