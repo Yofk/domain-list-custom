@@ -137,8 +137,8 @@ jobs:
           # suffix for `media`
           curl -sSL ${media} | awk '/DOMAIN-SUFFIX,/' | sed 's/DOMAIN-SUFFIX,//' | sort --ignore-case > ./tmp/temp-media-sort-suffix.txt
           # ========== 自定义 media 源 ==========
-          curl -sSL ${media_extra_domainset1} | grep -v '^#' | grep -v '^$' | grep -v '^DOMAIN' | grep -v 'ruleset.skk.moe' | sed 's/^+\.//' | sort --ignore-case >> ./tmp/temp-media-sort-suffix.txt
-          curl -sSL ${media_extra_domainset2} | grep -v '^#' | grep -v '^$' | grep -v '^DOMAIN' | sed 's/^+\.//' | sort --ignore-case >> ./tmp/temp-media-sort-suffix.txt
+          curl -sSL ${media_extra_domainset1} | grep -v '^#' | grep -v '^$' | grep -v '^DOMAIN' | grep -v 'ruleset.skk.moe' | grep -v '_' | sed 's/^+\.//' | sort --ignore-case >> ./tmp/temp-media-sort-suffix.txt
+          curl -sSL ${media_extra_domainset2} | grep -v '^#' | grep -v '^$' | grep -v '^DOMAIN' | grep -v '_' | sed 's/^+\.//' | sort --ignore-case >> ./tmp/temp-media-sort-suffix.txt
 
           # domain for `media`
           curl -sSL ${media} | awk '/DOMAIN,/' | sed 's/DOMAIN,//' | sort --ignore-case > ./tmp/temp-media-sort-domain.txt
@@ -179,7 +179,7 @@ jobs:
           curl -sSL ${cn1} | awk '!/# Disabled/' | perl -ne '/server=\/([^\/]+)/ && print "$1\n"' >> ./tmp/temp-cn-unsort-suffix.txt
           sort --ignore-case -u ./tmp/temp-cn-unsort-suffix.txt > ./tmp/temp-cn-sort-suffix.txt
           # ========== 自定义 cn 源 ==========
-          curl -sSL ${cn_extra} | grep -v '^#' | grep -v '^$' | grep -v '^DOMAIN' | sed 's/^+\.//' | sort --ignore-case >> ./tmp/temp-cn-sort-suffix.txt
+          curl -sSL ${cn_extra} | grep -v '^#' | grep -v '^$' | grep -v '^DOMAIN' | grep -v '_' | sed 's/^+\.//' | sort --ignore-case >> ./tmp/temp-cn-sort-suffix.txt
 
           # domain for `cn`
           cat ./publish/cn.txt | perl -ne '/^(full):([^:]+)(\n$|:\@.+)/ && print "$2\n"' | sort --ignore-case > ./tmp/temp-cn-sort-domain.txt
