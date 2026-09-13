@@ -1,5 +1,12 @@
 name: Upstream Sync
 
+# 确定性同步上游（替代原先基于 git merge 的 Fork-Sync 方案）。
+# 旧方案在上游改写 .github/workflows/* 时必然冲突报错；新方案：
+#   1) 硬重置到上游 main      -> 永远不会冲突
+#   2) 用 .sync/apply-custom.py 重新贴回我们的自定义源
+# 若上游结构变化导致锚点找不到，脚本会“响亮失败”（红叉），而不是静默丢失自定义源。
+# 需要 secret: WORKFLOW_PAT（需具备 repo + workflow 权限，因为要推送 workflow 文件改动）
+
 permissions:
   contents: write
 
@@ -10,26 +17,43 @@ on:
   workflow_dispatch:
 
 jobs:
-  sync_latest_from_upstream:
-    name: Sync latest commits from upstream repo
+  sync:
     runs-on: ubuntu-latest
     if: ${{ github.event.repository.fork }}
     steps:
-      - name: Checkout target repo
+      - name: Checkout
         uses: actions/checkout@v7
-
-      - name: Sync upstream changes
-        id: sync
-        uses: aormsby/Fork-Sync-With-Upstream-action@v3.4.3
         with:
-          upstream_sync_repo: Loyalsoldier/domain-list-custom
-          upstream_sync_branch: master
-          target_sync_branch: main
-          target_repo_token: ${{ secrets.GITHUB_TOKEN }}
-          test_mode: false
+          token: ${{ secrets.WORKFLOW_PAT }}
+          fetch-depth: 0
 
-      - name: Sync check
-        if: failure()
+      - name: Hard-sync to upstream and re-apply custom sources
+        env:
+          TOKEN: ${{ secrets.WORKFLOW_PAT }}
+          UPSTREAM_REPO: DustinWin/domain-list-custom
         run: |
-          echo "[Error] 由于上游仓库的 workflow 文件变更，导致 GitHub 自动暂停了本次自动更新，你需要手动 Sync Fork 一次。"
-          exit 1
+          set -euo pipefail
+
+          # 先保住我们自己的文件：上游没有它们，硬重置会连带删除
+          mkdir -p /tmp/keep
+          cp -r .sync /tmp/keep/.sync
+          cp .github/workflows/sync.yml /tmp/keep/sync.yml
+
+          git remote add upstream "https://github.com/${UPSTREAM_REPO}.git" 2>/dev/null || true
+          git fetch upstream main
+          git reset --hard upstream/main
+
+          cp -r /tmp/keep/.sync .sync
+          cp /tmp/keep/sync.yml .github/workflows/sync.yml
+          python3 .sync/apply-custom.py
+
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Already up to date with upstream (+ custom sources)."
+            exit 0
+          fi
+
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -m "ci: sync upstream $(date -u +%F) + re-apply custom sources"
+          git push --force "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main
